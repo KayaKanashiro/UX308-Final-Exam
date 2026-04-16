@@ -1,99 +1,72 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, ScrollView, KeyboardAvoidingView, Keyboard, Platform } from 'react-native';
+import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { handleInput } from '../Order';
-import ChatView from './ChatView'
+import DesktopLayout from './DesktopLayout';
+import ChatView from './ChatView';
 import WelcomeView from './WelcomeView';
 
-export default function(){
+export default function AIView({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [inputBarText, setInputBarText] = useState('');
   const scrollViewRef = useRef(null);
 
-  // Scroll to bottom helper
   const scrollToBottom = (animated = true) => {
-    // Small timeout ensures the layout has calculated before scrolling
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated });
     }, 100);
   };
 
-  useEffect(() => {
-    // Setup keyboard listeners
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => scrollToBottom());
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => scrollToBottom());
-
-    // Initial scroll
-    scrollToBottom(false);
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  // Scroll whenever messages update
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  useEffect(() => { scrollToBottom(); }, [messages]);
 
   const sendMessage = () => {
     if (inputBarText.trim().length === 0) return;
-
-    // Correct way to update state: create a NEW array
-    let newMessages = [{ direction: 'right', text: inputBarText }];
+    const newMessages = [{ direction: 'right', text: inputBarText }];
     const aResponse = handleInput(inputBarText);
-    for(const message of aResponse){
-      newMessages.push({direction: "left", text: message});
+    for (const message of aResponse) {
+      newMessages.push({ direction: 'left', text: message });
     }
     setMessages([...messages, ...newMessages]);
     setInputBarText('');
   };
 
+  const resetToWelcome = () => {
+    setMessages([]);
+    setInputBarText('');
+  };
+
   return (
-    <View style={styles.outer}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={{ flex: 1 }}
-      >
-        {messages.length?(
-        <ChatView scrollToBottom={scrollToBottom} 
-        sendMessage={sendMessage} 
-        scrollViewRef={scrollViewRef} 
-        styles={styles} 
-        messages={messages} 
-        setInputBarText={setInputBarText}
-        inputBarText={inputBarText}  />
-
-        ):(
-          <WelcomeView 
-          scrollToBottom={scrollToBottom} 
-        sendMessage={sendMessage} 
-        scrollViewRef={scrollViewRef} 
-        styles={styles} 
-        messages={messages} 
-        setInputBarText={setInputBarText}
-        inputBarText={inputBarText}  />
-
+    <DesktopLayout>
+      <View style={styles.chatArea}>
+        {messages.length ? (
+          <ChatView
+            scrollToBottom={scrollToBottom}
+            sendMessage={sendMessage}
+            scrollViewRef={scrollViewRef}
+            styles={styles}
+            messages={messages}
+            setInputBarText={setInputBarText}
+            inputBarText={inputBarText}
+            resetToWelcome={resetToWelcome}
+            onClose={onClose}
+          />
+        ) : (
+          <WelcomeView
+            sendMessage={sendMessage}
+            setInputBarText={setInputBarText}
+            inputBarText={inputBarText}
+          />
         )}
-      </KeyboardAvoidingView>
-    </View>
+      </View>
+    </DesktopLayout>
   );
-};
+}
 
-//TODO: separate these out. This is what happens when you're in a hurry!
 const styles = StyleSheet.create({
-
-  //ChatView
-
-  outer: {
+  chatArea: {
     flex: 1,
     flexDirection: 'column',
-    justifyContent: 'space-between',
-    backgroundColor: 'white'
   },
-
   messages: {
-    flex: 1
+    flex: 1,
   },
-
-})
+});
